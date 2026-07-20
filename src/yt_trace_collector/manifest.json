@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Trace Collector",
+  "version": "1.1",
+  "description": "Collect YouTube playback traces (watch ranges, stalls, network, buffer) for SABRE simulator research.",
+  "permissions": ["storage", "downloads"],
+  "host_permissions": ["https://www.youtube.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["collector.js"],
+      "world": "MAIN",
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "YouTube Trace Collector"
+  }
+}

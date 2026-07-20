@@ -1,0 +1,110 @@
+{
+  "buffer_level_threshold": 15000,
+  "prefetch": [
+    {
+      "segment": 7
+    },
+    {
+      "segment": 12
+    },
+    {
+      "segment": 18
+    },
+    {
+      "segment": 23
+    },
+    {
+      "segment": 29
+    },
+    {
+      "segment": 34
+    },
+    {
+      "segment": 39
+    },
+    {
+      "segment": 45
+    },
+    {
+      "segment": 50
+    },
+    {
+      "segment": 56
+    },
+    {
+      "segment": 61
+    },
+    {
+      "segment": 67
+    },
+    {
+      "segment": 72
+    },
+    {
+      "segment": 77
+    },
+    {
+      "segment": 83
+    },
+    {
+      "segment": 88
+    },
+    {
+      "segment": 94
+    },
+    {
+      "segment": 99
+    },
+    {
+      "segment": 104
+    },
+    {
+      "segment": 110
+    },
+    {
+      "segment": 115
+    },
+    {
+      "segment": 121
+    },
+    {
+      "segment": 126
+    },
+    {
+      "segment": 131
+    },
+    {
+      "segment": 137
+    },
+    {
+      "segment": 142
+    },
+    {
+      "segment": 148
+    },
+    {
+      "segment": 153
+    },
+    {
+      "segment": 159
+    },
+    {
+      "segment": 164
+    },
+    {
+      "segment": 169
+    },
+    {
+      "segment": 175
+    },
+    {
+      "segment": 180
+    },
+    {
+      "segment": 186
+    },
+    {
+      "segment": 191
+    }
+  ]
+}

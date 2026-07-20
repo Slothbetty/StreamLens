@@ -1,0 +1,92 @@
+digraph SABRE_Architecture {
+  graph [
+    rankdir=LR,
+    newrank=true,
+    nodesep=0.4,
+    ranksep=0.9,
+    fontname="Helvetica",
+    splines=true
+  ];
+
+  node [
+    shape=box,
+    style="rounded,filled",
+    fontname="Helvetica",
+    fontsize=13,
+    margin="0.14,0.08",
+    fillcolor="#FFFFFF"
+  ];
+
+  edge [
+    fontname="Helvetica",
+    fontsize=11,
+    arrowsize=0.8
+  ];
+
+  // ── Inputs ─────────────────────────────────────────────────────────────────
+  subgraph cluster_inputs {
+    label="Inputs";
+    style="rounded,filled";
+    color="#4477AA";
+    fontcolor="#4477AA";
+    fontsize=15;
+    fillcolor="#EEF3FF";
+
+    seek     [label="User Seek",       fillcolor="#D8E5F8"];
+    prefetch [label="Prefetch Config", fillcolor="#D8E5F8"];
+    movie    [label="Movie / Manifest",fillcolor="#D8E5F8"];
+    network  [label="Network Trace",   fillcolor="#D8E5F8"];
+  }
+
+  // ── Sabre Simulator ────────────────────────────────────────────────────────
+  subgraph cluster_sabre {
+    label="Sabre Simulator";
+    style="rounded,filled";
+    color="#333399";
+    fontcolor="#333399";
+    fontsize=15;
+    fillcolor="#EEEEFF";
+    margin="30,15";
+
+    dl   [label="Download Loop",        fillcolor="#C8C8F0", fontsize=13, margin="0.18,0.10"];
+    abr  [label="ABR Policy",           fillcolor="#FADDEA"];
+    buf  [label="MultiRegion Buffer",   fillcolor="#C8EDDA"];
+    pf   [label="Seek & Prefetch\nHandler", fillcolor="#FFF0A0"];
+
+    { rank=same; abr; buf; pf; }
+
+    dl -> abr [label="next quality?"];
+    dl -> buf [label="add / play chunk"];
+    dl -> pf  [label="seek / prefetch?"];
+  }
+
+  // ── Outputs ────────────────────────────────────────────────────────────────
+  subgraph cluster_outputs {
+    label="Outputs";
+    style="rounded,filled";
+    color="#44AA77";
+    fontcolor="#44AA77";
+    fontsize=15;
+    fillcolor="#F0FFF4";
+
+    qoe     [label="QoE",              fillcolor="#C8EDDA"];
+    rebuf   [label="Rebuffering Time", fillcolor="#C8EDDA"];
+    bitrate [label="Bitrates",         fillcolor="#C8EDDA"];
+    buflvl  [label="Buffer Level",     fillcolor="#C8EDDA"];
+  }
+
+  // Force vertical centering across clusters
+  { rank=same; seek; dl; qoe; }
+
+  // ── Inputs → Simulator ─────────────────────────────────────────────────────
+  seek     -> pf  [color="#4477AA"];
+  prefetch -> pf  [color="#4477AA"];
+  movie    -> dl  [color="#4477AA"];
+  network  -> dl  [color="#4477AA"];
+
+  // ── Simulator → Outputs ────────────────────────────────────────────────────
+  abr -> qoe     [color="#44AA77"];
+  abr -> bitrate [color="#44AA77"];
+  buf -> buflvl  [color="#44AA77"];
+  dl  -> rebuf   [color="#44AA77"];
+}

@@ -1,0 +1,52 @@
+{
+  "seeks": [
+    {
+      "seek_when": 53.5,
+      "seek_to": 87.8
+    },
+    {
+      "seek_when": 98.1,
+      "seek_to": 135.8
+    },
+    {
+      "seek_when": 142.6,
+      "seek_to": 168.8
+    },
+    {
+      "seek_when": 187.2,
+      "seek_to": 216.8
+    },
+    {
+      "seek_when": 231.7,
+      "seek_to": 264.8
+    },
+    {
+      "seek_when": 276.2,
+      "seek_to": 297.8
+    },
+    {
+      "seek_when": 320.8,
+      "seek_to": 345.8
+    },
+    {
+      "seek_when": 365.3,
+      "seek_to": 393.8
+    },
+    {
+      "seek_when": 409.8,
+      "seek_to": 444.8
+    },
+    {
+      "seek_when": 454.4,
+      "seek_to": 477.8
+    },
+    {
+      "seek_when": 498.9,
+      "seek_to": 525.8
+    },
+    {
+      "seek_when": 543.5,
+      "seek_to": 573.8
+    }
+  ]
+}

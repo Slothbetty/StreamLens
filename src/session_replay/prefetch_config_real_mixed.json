@@ -1,0 +1,17 @@
+{
+  "buffer_level_threshold": 3500,
+  "prefetch": [
+    {
+      "segment": 62
+    },
+    {
+      "segment": 63
+    },
+    {
+      "segment": 75
+    },
+    {
+      "segment": 76
+    }
+  ]
+}

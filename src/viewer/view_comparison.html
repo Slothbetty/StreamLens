@@ -1,0 +1,1975 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buffer.py Comparison Viewer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-size: 16px;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .file-input-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .file-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        input[type="file"] {
+            padding: 8px;
+            border: 2px dashed #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .summary-card h3 {
+            color: #7f8c8d;
+            font-size: 16px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .summary-card .metric-desc {
+            color: #95a5a6;
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+
+        .summary-card .value {
+            font-size: 38px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .summary-card .comparison {
+            font-size: 16px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+        
+        .comparison.positive {
+            color: #27ae60;
+        }
+        
+        .comparison.negative {
+            color: #e74c3c;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .chart-container h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+        }
+        /* Taller area + room for bottom legend & angled ticks (summary dashboard bar charts) */
+        .chart-wrapper--summary {
+            height: 500px;
+            min-height: 400px;
+        }
+        
+        .error-message {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+        
+        .config-info {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 15px;
+        }
+        
+        .config-info strong {
+            color: #2c3e50;
+        }
+
+        .prefetch-info {
+            background: #eaf7ee;
+            border-left: 4px solid #27ae60;
+            padding: 14px 18px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .prefetch-info strong {
+            color: #2c3e50;
+        }
+
+        .summary-dashboard {
+            margin-bottom: 20px;
+        }
+        .summary-dashboard h2 {
+            color: #2c3e50;
+            margin-bottom: 16px;
+        }
+        .summary-table-wrap {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            overflow: visible;
+        }
+        /* Horizontal scroll only on inner wrapper — avoids overflow-y clipping last rows (browser quirk). */
+        .summary-table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: visible;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 8px;
+        }
+        .summary-table {
+            /* Let columns size to content — width:100% squashes many columns and causes overlap */
+            width: max-content;
+            min-width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            table-layout: auto;
+        }
+        .summary-table th, .summary-table td {
+            padding: 10px 12px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+            box-sizing: border-box;
+        }
+        .summary-table th {
+            background: #f8f9fa;
+            color: #7f8c8d;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            line-height: 1.25;
+            white-space: normal;
+            word-break: break-word;
+            hyphens: auto;
+            min-width: 3.25rem;
+        }
+        /* Numeric / change columns: keep one line so digits don’t wrap oddly */
+        .summary-table td:not(:first-child) {
+            white-space: nowrap;
+        }
+        .summary-table-caption {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: 10px;
+        }
+        .summary-table th:first-child, .summary-table td:first-child {
+            text-align: left;
+            min-width: 10.5rem;
+            max-width: 15rem;
+            white-space: normal;
+            word-break: break-word;
+            vertical-align: top;
+            padding-right: 12px;
+        }
+        .summary-table tr.clickable-row {
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .summary-table tr.clickable-row:hover {
+            background: #eaf7ee;
+        }
+        .summary-table tr.active-row {
+            background: #d5f5e3;
+        }
+        /* Summary table % change: green = improved vs baseline, red = worse, gray = no change */
+        .metric-better { color: #1e8449; font-weight: 600; }
+        .metric-worse  { color: #c0392b; font-weight: 600; }
+        .metric-same   { color: #7f8c8d; font-weight: 500; }
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: white;
+        }
+        .badge-hit  { background: #27ae60; }
+        .badge-miss { background: #e67e22; }
+        .back-btn {
+            margin-bottom: 16px;
+            background: #7f8c8d;
+        }
+        .back-btn:hover { background: #636e72; }
+
+        .seek-legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .seek-legend-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 14px 16px;
+            border-left: 4px solid #bdc3c7;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            font-size: 15px;
+            line-height: 1.45;
+        }
+        .seek-legend-card.miss { border-left-color: #e67e22; }
+        .seek-legend-card.hit  { border-left-color: #27ae60; }
+        .seek-legend-card h4 {
+            margin: 0 0 6px 0;
+            font-size: 16px;
+            color: #2c3e50;
+        }
+        .seek-legend-card code {
+            font-size: 13px;
+            background: #ecf0f1;
+            padding: 2px 6px;
+            border-radius: 3px;
+            word-break: break-all;
+            overflow-wrap: break-word;
+        }
+        .scenario-badge {
+            display: inline-block;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+        .scenario-badge.miss { background: #fdebd0; color: #a04000; }
+        .scenario-badge.hit  { background: #d5f5e3; color: #1e8449; }
+        .scenario-file { font-size: 13px; color: #95a5a6; word-break: break-all; }
+        #summaryTable th:first-child,
+        #summaryTable td:first-child { max-width: 180px; min-width: 140px; }
+        .seek-legend-card.mixed { border-left-color: #2e86c1; }
+        .scenario-badge.mixed { background: #d6eaf8; color: #1a5276; }
+
+        .seek-hover-tooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.82);
+            color: #fff;
+            padding: 8px 13px;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1.55;
+            pointer-events: none;
+            z-index: 9999;
+            display: none;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .scenario-filter {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .scenario-filter label {
+            font-size: 15px;
+            font-weight: 600;
+            color: #7f8c8d;
+            margin-right: 4px;
+        }
+        .scenario-filter-btn {
+            padding: 6px 18px;
+            border-radius: 20px;
+            border: 2px solid #ddd;
+            background: white;
+            color: #555;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+        .scenario-filter-btn:hover { border-color: #3498db; color: #3498db; }
+        .scenario-filter-btn.active { background: #3498db; border-color: #3498db; color: white; }
+        .scenario-filter-btn.active.miss  { background: #e67e22; border-color: #e67e22; }
+        .scenario-filter-btn.active.hit   { background: #27ae60; border-color: #27ae60; }
+        .scenario-filter-btn.active.mixed { background: #2e86c1; border-color: #2e86c1; }
+    </style>
+</head>
+<body>
+    <div id="seekHoverTooltip" class="seek-hover-tooltip"></div>
+    <div class="container">
+        <header>
+            <h1>Buffer.py Comparison Viewer</h1>
+            <p>Compare simulation results with and without Nonlinear Buffering</p>
+        </header>
+        
+        <div class="file-input-section">
+            <div class="file-input-wrapper">
+                <input type="file" id="jsonFileInput" accept=".json">
+                <button onclick="loadFile()">Load Comparison Data</button>
+                <button onclick="loadExample()">Load Example</button>
+            </div>
+        </div>
+        
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+        <div id="loadingMessage" class="loading" style="display: none;">Loading data...</div>
+
+        <div id="summaryDashboard" style="display: none;">
+            <div id="summaryConfigInfo" class="config-info"></div>
+            <div id="seekLegend"></div>
+            <div class="summary-dashboard">
+                <div class="summary-table-wrap">
+                    <h2>Cross-Comparison Summary</h2>
+                    <p style="color:#7f8c8d;font-size:15px;margin-bottom:14px;">
+                        Each row is one <strong>seek scenario</strong> (see cards above) &times; one <strong>ABR algorithm</strong>.
+                        <strong>Without</strong> = baseline without <code>buffer.py</code> (no Nonlinear Buffering); <strong>with</strong> = same run with prefetch + Nonlinear Buffer.
+                        Click a row for detailed charts.
+                    </p>
+                    <div id="scenarioFilter" class="scenario-filter"></div>
+                    <div class="summary-table-scroll">
+                        <table class="summary-table" id="summaryTable"></table>
+                    </div>
+                    <p class="summary-table-caption" id="summaryTableCaption"></p>
+                </div>
+                <div class="chart-container">
+                    <h2>Rebuffering Events Across All Runs</h2>
+                    <p style="color:#7f8c8d;font-size:14px;margin:-8px 0 12px 0;">X-axis: <strong>MP</strong> = Miss PF, <strong>HP</strong> = Hit PF, then ABR (e.g. <code>MP · bola</code>). Legend is below the chart to avoid overlapping bar values.</p>
+                    <div class="chart-wrapper chart-wrapper--summary">
+                        <canvas id="summaryRebufChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h2>Rebuffering Time Across All Runs</h2>
+                    <p style="color:#7f8c8d;font-size:14px;margin:-8px 0 12px 0;">Same groups as the events chart (MP/HP &times; each ABR).</p>
+                    <div class="chart-wrapper chart-wrapper--summary">
+                        <canvas id="summaryTimeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="content" style="display: none;">
+            <button id="backToSummary" class="back-btn" style="display:none;" onclick="backToSummary()">&larr; Back to Summary</button>
+            <div id="configInfo" class="config-info"></div>
+            <div id="prefetchInfo" class="prefetch-info" style="display: none;"></div>
+            
+            <div class="summary-cards" id="summaryCards"></div>
+            
+            <div class="chart-container">
+                <h2>Rebuffering Comparison</h2>
+                <p id="rebufferChartSubtitle" class="summary-table-caption" style="margin:-6px 0 10px 0;"></p>
+                <div class="chart-wrapper">
+                    <canvas id="rebufferChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h2>Buffer Level Over Time</h2>
+                <p id="bufferChartSubtitle" class="summary-table-caption" style="margin:-6px 0 4px 0;"></p>
+                <p id="bufferChartCaption" class="summary-table-caption" style="margin:0 0 6px 0;"></p>
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
+                    <label style="font-size:15px;font-weight:600;color:#7f8c8d;">Time range (s):</label>
+                    <input id="xMinInput" type="number" min="0" step="1" placeholder="Start" title="X-axis start (seconds)"
+                        style="width:90px;padding:5px 10px;border:1px solid #ddd;border-radius:6px;font-size:15px;">
+                    <span style="color:#7f8c8d;font-size:15px;">to</span>
+                    <input id="xMaxInput" type="number" min="0" step="1" placeholder="End" title="X-axis end (seconds)"
+                        style="width:90px;padding:5px 10px;border:1px solid #ddd;border-radius:6px;font-size:15px;">
+                    <button onclick="applyXRange()" style="padding:5px 16px;border:none;border-radius:6px;background:#3498db;color:white;font-size:15px;cursor:pointer;">Apply</button>
+                    <button onclick="resetXRange()" style="padding:5px 16px;border:none;border-radius:6px;background:#95a5a6;color:white;font-size:15px;cursor:pointer;">Reset</button>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="bufferChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h2>Quality Over Time</h2>
+                <p id="qualityChartSubtitle" class="summary-table-caption" style="margin:-6px 0 10px 0;"></p>
+                <div class="chart-wrapper">
+                    <canvas id="qualityChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h2>Quality Distribution</h2>
+                <div class="chart-wrapper">
+                    <canvas id="qualityDistChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Global Chart.js font size — applies to all tick labels, legend text, axis titles
+        Chart.defaults.font.size = 15;
+        Chart.defaults.plugins.legend.labels.font = { size: 15 };
+
+        let comparisonData = null;
+        let summaryData = null;
+        let charts = {};
+        let activeStemFilter = 'all';
+        /** Detail (drill-down) chart keys only — must not destroy summary dashboard charts on row click */
+        const DETAIL_CHART_KEYS = ['rebuffer', 'buffer', 'quality', 'qualityDist'];
+
+        function filterSummaryTable(stem) {
+            activeStemFilter = stem;
+            document.querySelectorAll('.scenario-filter-btn').forEach(function(btn) {
+                btn.classList.toggle('active', btn.dataset.stem === stem);
+            });
+            let visible = 0;
+            document.querySelectorAll('#summaryTable tbody tr.clickable-row').forEach(function(row) {
+                const show = stem === 'all' || row.dataset.stem === stem;
+                row.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+            const cap = document.getElementById('summaryTableCaption');
+            if (cap) {
+                const total = document.querySelectorAll('#summaryTable tbody tr.clickable-row').length;
+                cap.textContent = (stem === 'all' ? total : visible + ' of ' + total) +
+                    ' run' + (visible !== 1 ? 's' : '') + ' shown' +
+                    '. All Change columns: green = improved vs baseline, red = worse, gray = unchanged.';
+            }
+        }
+
+        function applyXRange() {
+            if (comparisonData) renderComparison();
+        }
+
+        function resetXRange() {
+            document.getElementById('xMinInput').value = '';
+            document.getElementById('xMaxInput').value = '';
+            if (comparisonData) renderComparison();
+        }
+
+        function destroyDetailChartsOnly() {
+            DETAIL_CHART_KEYS.forEach(function(key) {
+                if (charts[key]) {
+                    charts[key].destroy();
+                    delete charts[key];
+                }
+            });
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function isSummaryFormat(data) {
+            return data && data.results && data.algorithms && !data.without_buffer_py;
+        }
+
+        /**
+         * Map output folder stem (from run_comparison.py) to a clear UI label.
+         * Extend SEEK_SCENARIO_MAP when you add new seek JSON files.
+         */
+        const SEEK_SCENARIO_MAP = {
+            seeks: {
+                title: 'Seeks miss prefetch',
+                short: 'Miss PF',
+                file: 'seeks.json',
+                css: 'miss',
+                blurb: 'Seeks land on non-prefetched segments. Both linear and Nonlinear Buffering must re-download after every seek — prefetch provides no benefit here.'
+            },
+            seeks_prefetch_hit: {
+                title: 'Seeks hit prefetch',
+                short: 'Hit PF',
+                file: 'seeks_prefetch_hit.json',
+                css: 'hit',
+                blurb: 'Seeks land exactly on prefetched segments. Nonlinear Buffering resumes instantly from cache; linear buffering must still re-download — expect clear stall reduction with dynamic.'
+            },
+            seeks_mixed: {
+                title: 'Seeks mixed',
+                short: 'Mixed',
+                file: 'seeks_mixed.json',
+                css: 'mixed',
+                blurb: 'Half of seeks hit prefetched segments, half miss. Nonlinear Buffering gains a partial advantage — intermediate improvement between the full-hit and full-miss cases.'
+            },
+            seeks_linear_hit_nonlinear_miss: {
+                title: 'Linear hit, dynamic miss',
+                short: 'Lin Hit',
+                file: 'seeks_linear_hit_nonlinear_miss.json',
+                css: 'miss',
+                blurb: 'Linear buffering hits the prefetch chunk when seeking; Nonlinear Buffering misses the prefetch chunk when seeking.'
+            },
+            seeks_linear_miss_nonlinear_hit: {
+                title: 'Linear miss, dynamic hit',
+                short: 'nonlinear hit',
+                file: 'seeks_linear_miss_nonlinear_hit.json',
+                css: 'hit',
+                blurb: 'Linear buffering misses the prefetch chunk when seeking; Nonlinear Buffering hits the prefetch chunk when seeking.'
+            },
+            // Session-replay prefetch config scenarios (fixed seeks, varying prefetch strategy).
+            // Ordered to mirror synthetic: miss → hit → mixed → lin-hit → dyn-hit.
+            // kind:'real' tells the card renderer to show "Prefetch config:" instead of "(folder:...)"
+            seeks_miss: {
+                title: 'Seeks miss prefetch',
+                short: 'Miss PF',
+                file: 'prefetch_config_real_seeks_miss.json',
+                css: 'miss',
+                kind: 'real',
+                blurb: 'Both linear and Nonlinear Buffering miss the prefetch chunk.'
+            },
+            prefetch_hit: {
+                title: 'Seeks hit prefetch',
+                short: 'Hit PF',
+                file: 'prefetch_config_real_prefetch_hit.json',
+                css: 'hit',
+                kind: 'real',
+                blurb: 'Both linear and Nonlinear Buffering hit the prefetch chunk.'
+            },
+            mixed: {
+                title: 'Seeks mixed',
+                short: 'Mixed',
+                file: 'prefetch_config_real_mixed.json',
+                css: 'mixed',
+                kind: 'real',
+                blurb: 'Some seeks hit the prefetch chunk; others miss it.'
+            },
+            linear_hit_nonlinear_miss: {
+                title: 'Linear hit, dynamic miss',
+                short: 'Lin Hit',
+                file: 'prefetch_config_real_linear_hit_nonlinear_miss.json',
+                css: 'miss',
+                kind: 'real',
+                blurb: 'Linear buffering hits the prefetch chunk when seeking; Nonlinear Buffering misses the prefetch chunk when seeking.'
+            },
+            linear_miss_nonlinear_hit: {
+                title: 'Linear miss, dynamic hit',
+                short: 'nonlinear hit',
+                file: 'prefetch_config_real_linear_miss_nonlinear_hit.json',
+                css: 'hit',
+                kind: 'real',
+                blurb: 'Linear buffering misses the prefetch chunk when seeking; Nonlinear Buffering hits the prefetch chunk when seeking.'
+            }
+        };
+
+        /**
+         * Build row order: every seek_config stem × algorithm, then any extra keys in results.
+         * Avoids missing rows when Object.keys order differs or JSON is hand-edited.
+         */
+        function orderedSummaryKeys(data) {
+            const results = data.results || {};
+            let algorithms = data.algorithms || [];
+            let stems = data.seek_configs || [];
+            if (!stems.length) {
+                const seen = new Set();
+                stems = [];
+                for (const k of Object.keys(results)) {
+                    const i = k.indexOf('/');
+                    if (i > 0) {
+                        const stem = k.slice(0, i);
+                        if (!seen.has(stem)) { seen.add(stem); stems.push(stem); }
+                    }
+                }
+            }
+            if (!algorithms.length) {
+                const seen = new Set();
+                algorithms = [];
+                for (const k of Object.keys(results)) {
+                    const i = k.indexOf('/');
+                    if (i > 0) {
+                        const abr = k.slice(i + 1);
+                        if (!seen.has(abr)) { seen.add(abr); algorithms.push(abr); }
+                    }
+                }
+            }
+            const ordered = [];
+            for (let s = 0; s < stems.length; s++) {
+                for (let a = 0; a < algorithms.length; a++) {
+                    const k = stems[s] + '/' + algorithms[a];
+                    if (results[k] !== undefined) ordered.push(k);
+                }
+            }
+            for (const k of Object.keys(results)) {
+                if (ordered.indexOf(k) === -1) ordered.push(k);
+            }
+            return ordered;
+        }
+
+        function seekScenarioFromKey(resultKey) {
+            const parts = resultKey.split('/');
+            const stem = parts.length > 1 ? parts[0] : '';
+            const abr = parts.length > 1 ? parts[1] : parts[0];
+            const known = SEEK_SCENARIO_MAP[stem];
+            if (known) {
+                return {
+                    stem: stem,
+                    abr: abr,
+                    title: known.title,
+                    short: known.short,
+                    file: known.file,
+                    css: known.css,
+                    blurb: known.blurb
+                };
+            }
+            return {
+                stem: stem,
+                abr: abr,
+                title: stem || resultKey,
+                short: stem || '?',
+                file: stem + '.json',
+                css: '',
+                blurb: 'Custom seek configuration.'
+            };
+        }
+
+        function hasPrefetchData() {
+            const w = comparisonData.with_buffer_py || {};
+            return (w.prefetch_events && w.prefetch_events.length > 0)
+                || (w.seek_events && w.seek_events.length > 0);
+        }
+
+        function withLabel() {
+            return hasPrefetchData() ? 'With buffer.py + prefetch' : 'With buffer.py';
+        }
+
+        function seekIntentForIndex(i) {
+            // Determine hit/miss for seek index i using the actual runtime result:
+            // a seek is a HIT if its destination segment was really prefetched.
+            // Falls back to null (no colour) when there is no prefetch data at all.
+            const sk = (comparisonData.with_buffer_py || {}).seek_events || [];
+            const pf = (comparisonData.with_buffer_py || {}).prefetch_events || [];
+            if (pf.length === 0) return null;
+            const prefetchedSegs = new Set(pf.map(e => e.segment));
+            const e = sk[i];
+            if (!e || e.segment === undefined) return null;
+            return prefetchedSegs.has(e.segment);
+        }
+
+        function seekAnnotations() {
+            const sk = (comparisonData.with_buffer_py || {}).seek_events || [];
+            if (sk.length === 0) return {};
+            const out = {};
+            sk.forEach((e, i) => {
+                const xVal = e.seek_when_s !== undefined ? e.seek_when_s : e.seek_to_s;
+                const intent = seekIntentForIndex(i);
+                const color = intent === null
+                    ? 'rgba(155, 89, 182, 0.7)'
+                    : intent ? 'rgba(39, 174, 96, 0.85)' : 'rgba(230, 126, 34, 0.85)';
+                const bgColor = intent === null
+                    ? 'rgba(155, 89, 182, 0.8)'
+                    : intent ? 'rgba(39, 174, 96, 0.9)' : 'rgba(230, 126, 34, 0.9)';
+                out['seek' + i] = {
+                    type: 'line',
+                    scaleID: 'x',
+                    value: xVal,
+                    borderColor: color,
+                    borderWidth: 2,
+                    borderDash: [6, 4],
+                    label: {
+                        display: true,
+                        content: String(i + 1),
+                        position: 'start',
+                        backgroundColor: bgColor,
+                        color: '#fff',
+                        font: { size: 13, weight: 'bold' },
+                        padding: { x: 4, y: 2 },
+                        borderRadius: 3
+                    }
+                };
+            });
+            return out;
+        }
+
+        function getSeekData() {
+            const sk = (comparisonData.with_buffer_py || {}).seek_events || [];
+            return sk.map((e, i) => {
+                const intent = seekIntentForIndex(i);
+                return {
+                    xVal: e.seek_when_s !== undefined ? e.seek_when_s : e.seek_to_s,
+                    seekIndex: i + 1,
+                    isHit: intent === true,
+                    hasPF: intent !== null,
+                    seekWhen: e.seek_when_s,
+                    seekTo: e.seek_to_s,
+                    fromSegment: e.from_segment,
+                    segment: e.segment
+                };
+            });
+        }
+
+        function setupSeekLabelTooltip(chart, skData) {
+            if (!skData || skData.length === 0) return;
+            const tooltipEl = document.getElementById('seekHoverTooltip');
+            const canvas = chart.canvas;
+
+            canvas.addEventListener('mousemove', function(evt) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = evt.clientX - rect.left;
+                const mouseY = evt.clientY - rect.top;
+                const top = chart.chartArea.top;
+
+                // Only trigger when cursor is in the label band at the top of the chart
+                if (mouseY < top - 2 || mouseY > top + 22) {
+                    tooltipEl.style.display = 'none';
+                    return;
+                }
+
+                let found = null;
+                for (let i = 0; i < skData.length; i++) {
+                    const px = chart.scales.x.getPixelForValue(skData[i].xVal);
+                    if (Math.abs(mouseX - px) <= 16) { found = skData[i]; break; }
+                }
+
+                if (found) {
+                    const status = found.hasPF
+                        ? (found.isHit ? '\u2713 HIT' : '\u2717 MISS') : '';
+                    const whenStr = found.seekWhen !== undefined
+                        ? found.seekWhen.toFixed(1) + 's' : '?';
+                    const segStr = found.fromSegment !== undefined
+                        ? 'seg ' + found.fromSegment + ' \u2192 seg ' + found.segment
+                        : 'seg ' + found.segment;
+                    tooltipEl.innerHTML =
+                        '<strong>Seek #' + found.seekIndex +
+                        (status ? '&nbsp;&nbsp;' + status : '') + '</strong><br>' +
+                        'at ' + whenStr + ' &nbsp; ' + segStr +
+                        ' (' + found.seekTo + 's)';
+                    tooltipEl.style.display = 'block';
+                    tooltipEl.style.left = (evt.clientX + 14) + 'px';
+                    tooltipEl.style.top = (evt.clientY - 10) + 'px';
+                } else {
+                    tooltipEl.style.display = 'none';
+                }
+            });
+
+            canvas.addEventListener('mouseleave', function() {
+                tooltipEl.style.display = 'none';
+            });
+        }
+
+        function prefetchBandAnnotation() {
+            const pf = (comparisonData.with_buffer_py || {}).prefetch_events || [];
+            const timed = pf.filter(e => e.start_time !== undefined && e.end_time !== undefined);
+            if (timed.length === 0) return {};
+            const minT = Math.min(...timed.map(e => e.start_time)) / 1000;
+            const maxT = Math.max(...timed.map(e => e.end_time)) / 1000;
+            return {
+                prefetchBand: {
+                    type: 'box',
+                    xMin: minT,
+                    xMax: maxT,
+                    backgroundColor: 'rgba(46, 204, 113, 0.08)',
+                    borderColor: 'rgba(46, 204, 113, 0.4)',
+                    borderWidth: 1,
+                    borderDash: [4, 4],
+                    label: { display: false }
+                }
+            };
+        }
+
+        /** Horizontal bands: x extent = simulator stall duration (buffer chart y is seconds; strips sit near 0). */
+        function rebufferDurationBandsAnnotations(without, with_) {
+            const out = {};
+            function addBands(run, keyPrefix, yMin, yMax, fill, border) {
+                const s = run.rebuffer_starts_s;
+                const d = run.rebuffer_durations_s;
+                if (!Array.isArray(s) || !Array.isArray(d)) return;
+                const n = Math.min(s.length, d.length);
+                for (let i = 0; i < n; i++) {
+                    const dur = d[i];
+                    if (!(dur > 0)) continue;
+                    const x0 = s[i];
+                    out[keyPrefix + i] = {
+                        type: 'box',
+                        xMin: x0,
+                        xMax: x0 + dur,
+                        yMin: yMin,
+                        yMax: yMax,
+                        backgroundColor: fill,
+                        borderColor: border,
+                        borderWidth: 1
+                    };
+                }
+            }
+            addBands(
+                without, 'rbDurWo',
+                0.01, 0.23,
+                'rgba(231, 76, 60, 0.2)',
+                'rgba(231, 76, 60, 0.55)'
+            );
+            addBands(
+                with_, 'rbDurWi',
+                0.25, 0.47,
+                'rgba(243, 156, 18, 0.22)',
+                'rgba(230, 126, 34, 0.55)'
+            );
+            return out;
+        }
+
+        function allAnnotations() {
+            return { ...seekAnnotations(), ...prefetchBandAnnotation() };
+        }
+        
+        function loadFile() {
+            const fileInput = document.getElementById('jsonFileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showError('Please select a JSON file');
+                return;
+            }
+            
+            document.getElementById('loadingMessage').style.display = 'block';
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (isSummaryFormat(parsed)) {
+                        summaryData = parsed;
+                        renderSummaryDashboard();
+                    } else {
+                        comparisonData = parsed;
+                        document.getElementById('summaryDashboard').style.display = 'none';
+                        renderComparison();
+                    }
+                } catch (error) {
+                    showError('Error parsing JSON: ' + error.message);
+                    document.getElementById('loadingMessage').style.display = 'none';
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        function loadExample() {
+            comparisonData = {
+                config: {
+                    network: 'network.json',
+                    movie: 'movie.json',
+                    abr: 'bola'
+                },
+                without_buffer_py: {
+                    summary: {
+                        total_rebuffer_time: 2.5,
+                        rebuffer_count: 3,
+                        total_play_time: 120.0,
+                        played_utility: 8.5,
+                        rebuffer_ratio: 0.02
+                    },
+                    rebuffer_starts_s: [0.5, 2.2, 4.0],
+                    rebuffer_durations_s: [0.8, 0.5, 1.2],
+                    time_series: {
+                        time_points: [0, 1, 2, 3, 4, 5],
+                        buffer_levels: [0, 2, 4, 3, 5, 6],
+                        qualities: [0, 1, 2, 1, 2, 3]
+                    }
+                },
+                with_buffer_py: {
+                    summary: {
+                        total_rebuffer_time: 1.2,
+                        rebuffer_count: 1,
+                        total_play_time: 120.0,
+                        played_utility: 9.2,
+                        rebuffer_ratio: 0.01
+                    },
+                    rebuffer_starts_s: [1.0],
+                    rebuffer_durations_s: [1.2],
+                    time_series: {
+                        time_points: [0, 1, 2, 3, 4, 5],
+                        buffer_levels: [0, 3, 5, 4, 6, 7],
+                        qualities: [0, 2, 2, 2, 3, 3]
+                    }
+                }
+            };
+            renderComparison();
+        }
+        
+        function renderSummaryDashboard() {
+            document.getElementById('loadingMessage').style.display = 'none';
+            document.getElementById('content').style.display = 'none';
+            document.getElementById('summaryDashboard').style.display = 'block';
+
+            const cfg = summaryData.config || {};
+            const prefetchLabel = cfg.prefetch_configs
+                ? `one config per scenario (${cfg.prefetch_configs.length} total)`
+                : cfg.prefetch_config || 'N/A';
+            document.getElementById('summaryConfigInfo').innerHTML = `
+                <strong>Summary run:</strong>
+                Network <code>${cfg.network || 'N/A'}</code>,
+                Movie <code>${cfg.movie || 'N/A'}</code>,
+                Prefetch <code>${prefetchLabel}</code>,
+                ABR algorithms: <code>${(summaryData.algorithms || []).join(', ')}</code>
+            `;
+
+            const keys = orderedSummaryKeys(summaryData);
+            const cap = document.getElementById('summaryTableCaption');
+            if (cap) {
+                cap.textContent = keys.length + ' run' + (keys.length !== 1 ? 's' : '') +
+                    '. All Change columns: green = improved vs baseline, red = worse, gray = unchanged.';
+            }
+            const rows = keys.map(k => {
+                const r = summaryData.results[k];
+                const wo = (r.without_buffer_py || {}).summary || {};
+                const wi = (r.with_buffer_py || {}).summary || {};
+                const pf = ((r.with_buffer_py || {}).prefetch_events || []).length;
+                return { key: k, wo, wi, pf, config: r.config || {}, scenario: seekScenarioFromKey(k) };
+            });
+
+            const stemsSeen = [...new Set(rows.map(r => r.scenario.stem).filter(s => s))];
+            let legendHtml = '<div class="seek-legend">';
+            stemsSeen.forEach(function(stem) {
+                const m = SEEK_SCENARIO_MAP[stem];
+                if (m) {
+                    const subtitle = m.kind === 'real'
+                        ? `<span style="color:#7f8c8d;">Prefetch config:</span> <code>${m.file}</code>`
+                        : `<code>${m.file}</code> <span style="color:#7f8c8d;">(folder: ${stem}/)</span>`;
+                    legendHtml += `
+                        <div class="seek-legend-card ${m.css}">
+                            <h4>${m.title}</h4>
+                            <div>${subtitle}</div>
+                            <p style="margin:8px 0 0 0;color:#555;">${m.blurb}</p>
+                        </div>`;
+                } else {
+                    legendHtml += `
+                        <div class="seek-legend-card">
+                            <h4>${stem}</h4>
+                            <p style="margin:6px 0 0 0;color:#555;">Custom seek scenario (see <code>${stem}.json</code>).</p>
+                        </div>`;
+                }
+            });
+            legendHtml += '</div>';
+            document.getElementById('seekLegend').innerHTML = legendHtml;
+
+            function pctChange(v0, v1) {
+                if (v0 === 0) {
+                    if (v1 === 0) return '0%';
+                    const sign = v1 > 0 ? '+' : '';
+                    return `${sign}${Number.isInteger(v1) ? v1 : v1.toFixed(2)} (from 0)`;
+                }
+                return ((v1 - v0) / v0 * 100).toFixed(1) + '%';
+            }
+            /** lowerIsBetter: true = smaller is better (rebuffer metrics); false = larger is better (utility, QoE); neutral = no directional judgment */
+            function metricChangeClass(v0, v1, lowerBetter) {
+                const eps = 1e-9;
+                if (Math.abs(Number(v0) - Number(v1)) <= eps) return 'metric-same';
+                const improved = lowerBetter ? (v1 < v0) : (v1 > v0);
+                return improved ? 'metric-better' : 'metric-worse';
+            }
+
+            let thtml = `<thead><tr>
+                <th>Seek scenario</th><th>ABR</th><th>Prefetches</th>
+                <th title="Rebuffering events: without → with buffer.py">Rebuf Events</th>
+                <th title="Percent change; green = fewer events (better), red = more (worse)">Change</th>
+                <th title="Total rebuffering time: without → with buffer.py">Rebuf Time</th>
+                <th title="Percent change; green = less stall time (better), red = more (worse)">Change</th>
+                <th title="Played utility: without → with buffer.py">Utility</th>
+                <th title="Percent change; green = higher utility (better), red = lower (worse)">Change</th>
+                <th title="QoE = mean utility − 10 × rebuf_ratio − switch_rate (SFS paper §5.1): without → with buffer.py">QoE</th>
+                <th title="Percent change; green = higher QoE (better), red = lower (worse)">Change</th>
+            </tr></thead><tbody>`;
+            rows.forEach(r => {
+                const scen = r.scenario;
+                const escKey = r.key.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const rc0 = r.wo.rebuffer_count || 0;
+                const rc1 = r.wi.rebuffer_count || 0;
+                const rt0 = r.wo.total_rebuffer_time || 0;
+                const rt1 = r.wi.total_rebuffer_time || 0;
+                const util0 = r.wo.played_utility || 0;
+                const util1 = r.wi.played_utility || 0;
+                const qoe0 = r.wo.qoe_score || 0;
+                const qoe1 = r.wi.qoe_score || 0;
+                const badgeClass = scen.css ? ('scenario-badge ' + scen.css) : 'scenario-badge';
+                thtml += `<tr class="clickable-row" data-stem="${scen.stem}" onclick="drillDown('${escKey}', this)">
+                    <td>
+                        <span class="${badgeClass}">${scen.short}</span><br>
+                        <strong>${scen.title}</strong><br>
+                        <span class="scenario-file">${scen.file}</span>
+                    </td>
+                    <td><strong>${scen.abr}</strong></td>
+                    <td>${r.pf}</td>
+                    <td>${rc0} → ${rc1}</td>
+                    <td class="${metricChangeClass(rc0, rc1, true)}">${pctChange(rc0, rc1)}</td>
+                    <td>${rt0.toFixed(2)}s → ${rt1.toFixed(2)}s</td>
+                    <td class="${metricChangeClass(rt0, rt1, true)}">${pctChange(rt0, rt1)}</td>
+                    <td>${util0.toFixed(1)} → ${util1.toFixed(1)}</td>
+                    <td class="${metricChangeClass(util0, util1, false)}">${pctChange(util0, util1)}</td>
+                    <td>${qoe0.toFixed(2)} → ${qoe1.toFixed(2)}</td>
+                    <td class="${metricChangeClass(qoe0, qoe1, false)}">${pctChange(qoe0, qoe1)}</td>
+                </tr>`;
+            });
+            thtml += '</tbody>';
+            document.getElementById('summaryTable').innerHTML = thtml;
+
+            // Build scenario filter buttons
+            activeStemFilter = 'all';
+            const filterEl = document.getElementById('scenarioFilter');
+            if (filterEl) {
+                let fbHtml = '<label>Show:</label>';
+                fbHtml += '<button class="scenario-filter-btn active" data-stem="all" onclick="filterSummaryTable(\'all\')">All</button>';
+                stemsSeen.forEach(function(stem) {
+                    const m = SEEK_SCENARIO_MAP[stem];
+                    const css = m ? m.css : '';
+                    const label = m ? m.title : stem;
+                    fbHtml += `<button class="scenario-filter-btn${css ? ' ' + css : ''}" data-stem="${stem}" onclick="filterSummaryTable('${stem}')">${label}</button>`;
+                });
+                filterEl.innerHTML = fbHtml;
+            }
+
+            Object.values(charts).forEach(c => { if (c) c.destroy(); });
+            charts = {};
+
+            // Defer chart creation so the browser lays out the now-visible container first
+            requestAnimationFrame(function() {
+                function compactSummaryXLabel(row) {
+                    const s = row.scenario;
+                    var pf = (s.short === 'Miss PF') ? 'MP' : (s.short === 'Hit PF') ? 'HP' : (s.short || s.stem || '?').replace(/\s+/g, '').slice(0, 6);
+                    return pf + ' \u00b7 ' + s.abr;
+                }
+                const chartLabels = rows.map(compactSummaryXLabel);
+                const colWithout = 'rgba(231, 76, 60, 0.7)';
+                const colWith = 'rgba(39, 174, 96, 0.7)';
+                const borderWithout = 'rgba(231, 76, 60, 1)';
+                const borderWith = 'rgba(39, 174, 96, 1)';
+
+                const dlOpts = {
+                    anchor: 'end',
+                    align: 'end',
+                    offset: 6,
+                    color: '#2c3e50',
+                    font: { weight: 'bold', size: 13 },
+                    clamp: true,
+                    clip: false
+                };
+
+                const summaryBarLayout = { padding: { top: 20, right: 8, bottom: 2, left: 6 } };
+                const summaryXScale = {
+                    grid: { offset: true },
+                    ticks: {
+                        maxRotation: 50,
+                        minRotation: 50,
+                        autoSkip: false,
+                        font: { size: 13, lineHeight: 1.2 },
+                        padding: 4,
+                        maxTicksLimit: 32
+                    }
+                };
+
+                charts.summaryRebuf = new Chart(
+                    document.getElementById('summaryRebufChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [
+                            { label: 'Without buffer.py',
+                              data: rows.map(r => r.wo.rebuffer_count || 0),
+                              backgroundColor: colWithout, borderColor: borderWithout, borderWidth: 1 },
+                            { label: 'With buffer.py + prefetch',
+                              data: rows.map(r => r.wi.rebuffer_count || 0),
+                              backgroundColor: colWith, borderColor: borderWith, borderWidth: 1 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: summaryBarLayout,
+                        datasets: {
+                            bar: { categoryPercentage: 0.78, barPercentage: 0.86 }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Rebuffer Events' } },
+                            x: summaryXScale
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                align: 'center',
+                                labels: { boxWidth: 16, padding: 16, font: { size: 15 } }
+                            },
+                            datalabels: Object.assign({}, dlOpts, {
+                                formatter: function(v) { return v % 1 === 0 ? v : v.toFixed(2); }
+                            })
+                        }
+                    },
+                    plugins: [ChartDataLabels]
+                });
+
+                charts.summaryTime = new Chart(
+                    document.getElementById('summaryTimeChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [
+                            { label: 'Without buffer.py',
+                              data: rows.map(r => r.wo.total_rebuffer_time || 0),
+                              backgroundColor: colWithout, borderColor: borderWithout, borderWidth: 1 },
+                            { label: 'With buffer.py + prefetch',
+                              data: rows.map(r => r.wi.total_rebuffer_time || 0),
+                              backgroundColor: colWith, borderColor: borderWith, borderWidth: 1 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: summaryBarLayout,
+                        datasets: {
+                            bar: { categoryPercentage: 0.78, barPercentage: 0.86 }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Rebuffer Time (s)' } },
+                            x: summaryXScale
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                align: 'center',
+                                labels: { boxWidth: 16, padding: 16, font: { size: 15 } }
+                            },
+                            datalabels: Object.assign({}, dlOpts, {
+                                formatter: function(v) { return v.toFixed(2); }
+                            })
+                        }
+                    },
+                    plugins: [ChartDataLabels]
+                });
+            });
+        }
+
+        function drillDown(key, rowEl) {
+            if (!summaryData || !summaryData.results[key]) return;
+            comparisonData = summaryData.results[key];
+            document.querySelectorAll('.clickable-row').forEach(r => r.classList.remove('active-row'));
+            if (rowEl) rowEl.classList.add('active-row');
+            document.getElementById('content').style.display = 'block';
+            document.getElementById('backToSummary').style.display = '';
+            renderComparison();
+            document.getElementById('content').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function backToSummary() {
+            document.getElementById('content').style.display = 'none';
+            document.getElementById('backToSummary').style.display = 'none';
+            document.getElementById('summaryDashboard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function renderComparison() {
+            document.getElementById('loadingMessage').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+            
+            renderConfigInfo();
+            renderPrefetchInfo();
+            renderSummary();
+            renderCharts();
+        }
+        
+        function seekScenarioFromSeekFile(seekPath) {
+            if (!seekPath) return null;
+            const base = seekPath.replace(/\\/g, '/').split('/').pop().replace(/\.json$/i, '');
+            return SEEK_SCENARIO_MAP[base] || null;
+        }
+
+        function renderConfigInfo() {
+            const config = comparisonData.config || {};
+            const scen = seekScenarioFromSeekFile(config.seek_config);
+            let html = `
+                <strong>Configuration:</strong> 
+                Network: ${config.network || 'N/A'}, 
+                Movie: ${config.movie || 'N/A'}, 
+                ABR: ${config.abr || 'N/A'}
+                ${config.seek_config ? `, Seeks: ${config.seek_config}` : ''}
+                ${config.prefetch_config ? `, Prefetch: ${config.prefetch_config}` : ''}
+            `;
+            if (scen) {
+                html += `<br><strong>Seek scenario:</strong> ${scen.title} — ${scen.blurb}`;
+            }
+            document.getElementById('configInfo').innerHTML = html;
+        }
+
+        function renderPrefetchInfo() {
+            const el = document.getElementById('prefetchInfo');
+            if (!hasPrefetchData()) {
+                el.style.display = 'none';
+                return;
+            }
+            const w = comparisonData.with_buffer_py || {};
+            const pf = w.prefetch_events || [];
+            const sk = w.seek_events || [];
+
+            const pfDetails = pf.map(e => {
+                let s = `seg ${e.segment} (q${e.quality})`;
+                if (e.start_time !== undefined && e.end_time !== undefined) {
+                    s += ` [${(e.start_time / 1000).toFixed(1)}s\u2013${(e.end_time / 1000).toFixed(1)}s]`;
+                }
+                const afterMs = e.buffer_level_after !== undefined ? e.buffer_level_after : e.buffer_level;
+                if (e.buffer_level_before != null && afterMs != null) {
+                    s += ` buf ${(e.buffer_level_before / 1000).toFixed(1)}\u2192${(afterMs / 1000).toFixed(1)}s`;
+                }
+                return s;
+            }).join(', ') || 'none';
+
+            const prefetchedSegs = new Set(pf.map(e => e.segment));
+            const skDetails = sk.map(e => {
+                const isHit = prefetchedSegs.size > 0 && e.segment !== undefined && prefetchedSegs.has(e.segment);
+                const badge = prefetchedSegs.size > 0
+                    ? `<span class="badge ${isHit ? 'badge-hit' : 'badge-miss'}">${isHit ? 'HIT' : 'MISS'}</span> `
+                    : '';
+                const segStr = e.from_segment !== undefined
+                    ? `seg ${e.from_segment} \u2192 seg ${e.segment} (${e.seek_to_s}s)`
+                    : `seg ${e.segment} (${e.seek_to_s}s)`;
+                let s = segStr;
+                if (e.seek_when_s !== undefined) {
+                    s = `at ${e.seek_when_s.toFixed(1)}s &nbsp; ${segStr}`;
+                }
+                return badge + s;
+            }).join(', ') || 'none';
+
+            el.innerHTML =
+                `<strong>Prefetch downloads:</strong> ${pfDetails} (${pf.length} total)<br>
+                 <strong>Seek events:</strong> ${skDetails} (${sk.length} total)`;
+            el.style.display = 'block';
+        }
+        
+        function renderSummary() {
+            const without = comparisonData.without_buffer_py.summary || {};
+            const with_ = comparisonData.with_buffer_py.summary || {};
+            
+            const metrics = [
+                { label: 'Total Rebuffering Time', key: 'total_rebuffer_time', unit: 's', lowerIsBetter: true,
+                  desc: 'Sum of all stall intervals inside the simulator (printed as seconds). Same numbers as the bar chart; the buffer graph does not recompute this total.' },
+                { label: 'Rebuffering Events', key: 'rebuffer_count', unit: '', lowerIsBetter: true,
+                  desc: 'How often the simulator charged an empty-buffer stall while advancing time. The buffer chart shows one marker per contiguous near-empty span, which should be close to this count.' },
+                { label: 'Played Utility', key: 'played_utility', unit: '', lowerIsBetter: false,
+                  desc: 'Sum of per-segment quality scores over the session. Higher means the player selected better quality more often.' },
+                { label: 'Rebuffer Ratio', key: 'rebuffer_ratio', unit: '', lowerIsBetter: true,
+                  desc: 'Rebuffering time divided by total play time. Measures what fraction of the session was spent stalled.' },
+                { label: 'Quality of Experience', key: 'qoe_score', unit: '', lowerIsBetter: false,
+                  desc: 'QoE = v̄ − β·ρ_rebuf − γ·p_switch (SFS paper §5.1), where v̄ = time-average log-bitrate utility (per second), ρ_rebuf = rebuffer_time / total_play_time, p_switch = bitrate switches per second, β = 10, γ = 1. Higher is better.' }
+            ];
+            
+            const cardsHtml = metrics.map(metric => {
+                const valWithout = without[metric.key] || 0;
+                const valWith = with_[metric.key] || 0;
+                const diff = valWith - valWithout;
+                const percentChange = valWithout !== 0 ? ((diff / valWithout) * 100).toFixed(1) : 0;
+                
+                let comparisonClass = 'comparison';
+                let comparisonText = '';
+                if (metric.neutral) {
+                    comparisonText = diff >= 0
+                        ? `\u2191 ${Math.abs(percentChange)}% vs without`
+                        : `\u2193 ${Math.abs(percentChange)}% vs without`;
+                } else if (metric.lowerIsBetter) {
+                    comparisonClass += diff < 0 ? ' positive' : ' negative';
+                    comparisonText = diff < 0 ? `\u2193 ${Math.abs(percentChange)}% improvement` : `\u2191 ${Math.abs(percentChange)}% worse`;
+                } else {
+                    comparisonClass += diff > 0 ? ' positive' : ' negative';
+                    comparisonText = diff > 0 ? `\u2191 ${Math.abs(percentChange)}% improvement` : `\u2193 ${Math.abs(percentChange)}% worse`;
+                }
+                
+                return `
+                    <div class="summary-card">
+                        <h3>${metric.label}</h3>
+                        <div class="metric-desc">${metric.desc}</div>
+                        <div class="value">${valWith.toFixed(2)}${metric.unit}</div>
+                        <div class="${comparisonClass}">
+                            Without: ${valWithout.toFixed(2)}${metric.unit}<br>
+                            ${comparisonText}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('summaryCards').innerHTML = cardsHtml;
+        }
+        
+        function toXY(timePoints, values) {
+            return (timePoints || []).map((t, i) => ({ x: t, y: (values || [])[i] }));
+        }
+
+        /**
+         * Contiguous stall episodes where buffer is (near) empty. The comparison JSON only
+         * records buffer at download boundaries, so duration is approximate (gap between samples).
+         * This matches the spirit of summary.rebuffer_count much better than flagging every sample
+         * with buffer &lt; 1s, which was both wrong semantically and unreadable.
+         */
+        function findRebufferEpisodes(timePoints, bufferLevels, emptyThresholdSec) {
+            const tp = timePoints || [];
+            const bl = bufferLevels || [];
+            const eps = emptyThresholdSec;
+            const episodes = [];
+            let inStall = false;
+            let stallStart = null;
+            let stallStartIdx = -1;
+            for (let i = 0; i < tp.length; i++) {
+                const v = bl[i];
+                const stalled = v !== undefined && v <= eps;
+                if (stalled && !inStall) {
+                    stallStart = tp[i];
+                    stallStartIdx = i;
+                    inStall = true;
+                } else if (!stalled && inStall) {
+                    episodes.push({
+                        start: stallStart,
+                        end: tp[i],
+                        duration: Math.max(0, tp[i] - stallStart),
+                        startIdx: stallStartIdx,
+                        endIdx: i
+                    });
+                    inStall = false;
+                    stallStart = null;
+                    stallStartIdx = -1;
+                }
+            }
+            if (inStall && stallStart !== null) {
+                const lastT = tp[tp.length - 1];
+                episodes.push({
+                    start: stallStart,
+                    end: lastT,
+                    duration: Math.max(0, lastT - stallStart),
+                    startIdx: stallStartIdx,
+                    endIdx: tp.length - 1
+                });
+            }
+            return episodes;
+        }
+
+        /** One scatter point per episode, y in seconds (slightly above axis so lines at 0 stay visible). */
+        function episodesToScatterPoints(episodes, ySec) {
+            return episodes.map(function(ep) {
+                return {
+                    x: ep.start,
+                    y: ySec,
+                    episodeEnd: ep.end,
+                    episodeDuration: ep.duration
+                };
+            });
+        }
+
+        /**
+         * Prefer `rebuffer_starts_s` from run_comparison.py (exact simulator times, same count as
+         * summary.rebuffer_count). Fall back to sparse time-series heuristics for older JSON.
+         */
+        function buildStallMarkers(runMetrics, timePoints, bufferLevels, emptyThresholdSec, ySec) {
+            if (Array.isArray(runMetrics.rebuffer_starts_s)) {
+                const durs = Array.isArray(runMetrics.rebuffer_durations_s)
+                    ? runMetrics.rebuffer_durations_s
+                    : null;
+                return {
+                    points: runMetrics.rebuffer_starts_s.map(function(t, i) {
+                        const o = { x: t, y: ySec, fromSimulator: true };
+                        if (durs && i < durs.length && durs[i] > 0) {
+                            o.stallDurationSec = durs[i];
+                        }
+                        return o;
+                    }),
+                    source: 'simulator',
+                    count: runMetrics.rebuffer_starts_s.length
+                };
+            }
+            const ep = findRebufferEpisodes(timePoints, bufferLevels, emptyThresholdSec);
+            return {
+                points: episodesToScatterPoints(ep, ySec),
+                source: 'estimated',
+                count: ep.length
+            };
+        }
+
+        function remapStallPointsY(points, ySec) {
+            return points.map(function(p) {
+                return {
+                    x: p.x,
+                    y: ySec,
+                    fromSimulator: p.fromSimulator,
+                    stallDurationSec: p.stallDurationSec,
+                    episodeEnd: p.episodeEnd,
+                    episodeDuration: p.episodeDuration
+                };
+            });
+        }
+
+        /** Prefetch JSON: buffer_level_before = ms when download starts (threshold gate); after = ms when done (buffer chart y). */
+        function prefetchTooltipLabel(e, endTimeSec) {
+            const t = endTimeSec != null ? endTimeSec.toFixed(1) : '?';
+            let s = 'Prefetch seg ' + e.segment + ' (q' + e.quality + ') ends ~' + t + 's';
+            if (e.start_time !== undefined && e.end_time !== undefined) {
+                s += ' [' + (e.start_time / 1000).toFixed(1) + 's–' + (e.end_time / 1000).toFixed(1) + 's]';
+            }
+            if (e.buffer_level_before != null) {
+                s += ' · at start: ' + (e.buffer_level_before / 1000).toFixed(2) + 's (when gate ran)';
+            }
+            const afterMs = e.buffer_level_after !== undefined ? e.buffer_level_after : e.buffer_level;
+            if (afterMs != null) {
+                s += ' · after: ' + (afterMs / 1000).toFixed(2) + 's (end of prefetch; height of green triangle on buffer chart)';
+            }
+            return s;
+        }
+
+        function renderCharts() {
+            const without = comparisonData.without_buffer_py;
+            const with_ = comparisonData.with_buffer_py;
+            const label = withLabel();
+            const baseAnnotations = allAnnotations();
+
+            // Populate chart subtitles with ABR + seek scenario context
+            const cfg = comparisonData.config || {};
+            const scen = seekScenarioFromSeekFile(cfg.seek_config);
+            const abrLabel = cfg.abr ? `ABR: <strong>${cfg.abr}</strong>` : '';
+            const scenLabel = scen
+                ? `Seek scenario: <strong>${scen.title}</strong>`
+                : (cfg.seek_config ? `Seek config: <strong>${cfg.seek_config.split(/[\\/]/).pop()}</strong>` : '');
+            const subtitleHtml = [abrLabel, scenLabel].filter(Boolean).join(' &nbsp;|&nbsp; ');
+            ['rebufferChartSubtitle', 'bufferChartSubtitle', 'qualityChartSubtitle'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = subtitleHtml;
+            });
+            const pf = (with_.prefetch_events || []).filter(e => e.end_time !== undefined);
+            const skData = getSeekData();
+
+            // Compute a shared x-axis range so both time-series charts use identical
+            // min/max, which keeps the annotation lines at the same pixel x-position.
+            const withoutTS = without.time_series || {};
+            const withTS = with_.time_series || {};
+            const allTP = [
+                ...(withoutTS.time_points || []),
+                ...(withTS.time_points || []),
+                ...pf.map(e => e.end_time / 1000)
+            ];
+            const dataXMin = allTP.length > 0 ? Math.min(...allTP) : 0;
+            const dataXMax = allTP.length > 0 ? Math.max(...allTP) : undefined;
+            const userXMin = parseFloat(document.getElementById('xMinInput').value);
+            const userXMax = parseFloat(document.getElementById('xMaxInput').value);
+            const sharedXMin = !isNaN(userXMin) ? userXMin : dataXMin;
+            const sharedXMax = !isNaN(userXMax) ? userXMax : dataXMax;
+
+            // Fixed y-axis width (px) so both chart areas start at the same left offset.
+            const YAXIS_WIDTH = 62;
+
+            // Only tear down per-run charts — keep summaryRebuf / summaryTime alive (same page as summary table)
+            destroyDetailChartsOnly();
+
+            // Rebuffering comparison chart
+            const rebufferCtx = document.getElementById('rebufferChart').getContext('2d');
+            charts.rebuffer = new Chart(rebufferCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Total Rebuffering Time (s)', 'Rebuffering Events'],
+                    datasets: [
+                        {
+                            label: 'Without buffer.py',
+                            data: [
+                                without.summary?.total_rebuffer_time || 0,
+                                without.summary?.rebuffer_count || 0
+                            ],
+                            backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                            borderColor: 'rgba(231, 76, 60, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: label,
+                            data: [
+                                with_.summary?.total_rebuffer_time || 0,
+                                with_.summary?.rebuffer_count || 0
+                            ],
+                            backgroundColor: 'rgba(39, 174, 96, 0.7)',
+                            borderColor: 'rgba(39, 174, 96, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Value' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const v = context.parsed.y;
+                                    const isEvents = context.dataIndex === 1;
+                                    const s = isEvents && Math.abs(v - Math.round(v)) < 1e-6
+                                        ? String(Math.round(v))
+                                        : v.toFixed(2);
+                                    return context.dataset.label + ': ' + s;
+                                }
+                            }
+                        },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'end',
+                            color: '#2c3e50',
+                            font: { weight: 'bold', size: 16 },
+                            formatter: function(value) {
+                                return value % 1 === 0 ? value : value.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+
+            // Buffer level over time (linear x-axis for precise annotation placement)
+            const bufferCtx = document.getElementById('bufferChart').getContext('2d');
+
+            const rebufEmptyThresholdSec = 0.02;
+            const rebufMarkerYWithout = 0.12;
+            const rebufMarkerYWith = 0.36;
+            const woStall = buildStallMarkers(
+                without, withoutTS.time_points, withoutTS.buffer_levels, rebufEmptyThresholdSec, rebufMarkerYWithout);
+            const wiStall = buildStallMarkers(
+                with_, withTS.time_points, withTS.buffer_levels, rebufEmptyThresholdSec, rebufMarkerYWith);
+            const rebufWithout = woStall.points;
+            const rebufWith = wiStall.points;
+
+            const durationBandAnn = rebufferDurationBandsAnnotations(without, with_);
+            const bufferAnnotations = Object.assign({}, baseAnnotations, durationBandAnn);
+
+            const bufCap = document.getElementById('bufferChartCaption');
+            if (bufCap) {
+                const sWo = without.summary && without.summary.rebuffer_count;
+                const sWi = with_.summary && with_.summary.rebuffer_count;
+                const hasDurData = (Array.isArray(without.rebuffer_durations_s) && without.rebuffer_durations_s.length > 0)
+                    || (Array.isArray(with_.rebuffer_durations_s) && with_.rebuffer_durations_s.length > 0);
+                bufCap.style.display = '';
+                if (woStall.source === 'simulator' && wiStall.source === 'simulator') {
+                    bufCap.innerHTML =
+                        '<strong>Stall markers</strong> use exact times from the simulator (same count as ' +
+                        '<strong>Rebuffering Events</strong> in the bar chart: ' +
+                        '<strong>' + woStall.count + '</strong> without, <strong>' + wiStall.count + '</strong> with). ' +
+                        (hasDurData
+                            ? '<strong>Coloured bands</strong> along the bottom span each stall’s <strong>duration</strong> ' +
+                              '(horizontal width = rebuffering time in seconds). Red = without buffer.py, orange = with. '
+                            : '') +
+                        'Markers sit at stall start; red/orange use different heights when both runs stall together.';
+                } else {
+                    bufCap.innerHTML =
+                        '<strong>Stall markers</strong> are estimated from sparse buffer samples (older JSON). ' +
+                        'Re-run <code>run_comparison.py</code> to embed <code>rebuffer_starts_s</code> so markers ' +
+                        'match the bar chart (' +
+                        (sWo != null ? 'summary without: ' + sWo : '?') +
+                        ', ' +
+                        (sWi != null ? 'with: ' + sWi : '?') +
+                        '). Estimated counts — without: <strong>' + woStall.count + '</strong>; with: <strong>' +
+                        wiStall.count + '</strong>.';
+                }
+            }
+
+            const bufferDatasets = [
+                {
+                    label: 'Without buffer.py',
+                    data: toXY(withoutTS.time_points, withoutTS.buffer_levels),
+                    borderColor: 'rgba(231, 76, 60, 0.7)',
+                    backgroundColor: 'rgba(231, 76, 60, 0.05)',
+                    borderDash: [6, 3],
+                    borderWidth: 2,
+                    tension: 0.1,
+                    pointRadius: 1.5
+                },
+                {
+                    label: label,
+                    data: toXY(withTS.time_points, withTS.buffer_levels),
+                    borderColor: 'rgba(39, 174, 96, 1)',
+                    backgroundColor: 'rgba(39, 174, 96, 0.08)',
+                    borderWidth: 2.5,
+                    tension: 0.1,
+                    pointRadius: 1.5
+                }
+            ];
+            if (rebufWithout.length > 0) {
+                bufferDatasets.push({
+                    label: 'Stall start (without)',
+                    data: rebufWithout,
+                    type: 'scatter',
+                    pointStyle: 'crossRot',
+                    pointRadius: 10,
+                    pointHoverRadius: 14,
+                    pointBackgroundColor: 'rgba(231, 76, 60, 1)',
+                    pointBorderColor: 'rgba(231, 76, 60, 1)',
+                    pointBorderWidth: 3,
+                    showLine: false
+                });
+            }
+            if (rebufWith.length > 0) {
+                bufferDatasets.push({
+                    label: 'Stall start (with)',
+                    data: rebufWith,
+                    type: 'scatter',
+                    pointStyle: 'triangle',
+                    pointRadius: 10,
+                    pointHoverRadius: 14,
+                    pointBackgroundColor: 'rgba(243, 156, 18, 1)',
+                    pointBorderColor: 'rgba(230, 126, 34, 1)',
+                    pointBorderWidth: 3,
+                    showLine: false
+                });
+            }
+            if (pf.length > 0) {
+                bufferDatasets.push({
+                    label: 'Prefetch download',
+                    data: pf.map(e => ({
+                        x: e.end_time / 1000,
+                        y: (e.buffer_level_after !== undefined ? e.buffer_level_after : e.buffer_level) / 1000
+                    })),
+                    type: 'scatter',
+                    pointStyle: 'triangle',
+                    pointRadius: 10,
+                    pointHoverRadius: 14,
+                    pointBackgroundColor: 'rgba(46, 204, 113, 0.9)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    showLine: false
+                });
+            }
+            charts.buffer = new Chart(bufferCtx, {
+                type: 'line',
+                data: { datasets: bufferDatasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Buffer Level (seconds)' },
+                            afterFit: function(axis) { axis.width = YAXIS_WIDTH; }
+                        },
+                        x: {
+                            type: 'linear',
+                            min: sharedXMin,
+                            max: sharedXMax,
+                            title: { display: true, text: 'Playback Time (seconds)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        annotation: { annotations: bufferAnnotations },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    if (ctx.dataset.label === 'Prefetch download') {
+                                        return prefetchTooltipLabel(pf[ctx.dataIndex], ctx.parsed.x);
+                                    }
+                                    if (ctx.dataset.label && ctx.dataset.label.indexOf('Stall start') === 0) {
+                                        const raw = ctx.raw || {};
+                                        if (raw.fromSimulator) {
+                                            if (raw.stallDurationSec != null && raw.stallDurationSec > 0) {
+                                                return ctx.dataset.label + ': start ' + ctx.parsed.x.toFixed(2) +
+                                                    's, duration ' + raw.stallDurationSec.toFixed(2) + 's';
+                                            }
+                                            return ctx.dataset.label + ': ' + ctx.parsed.x.toFixed(2) +
+                                                's (simulator rebuffer event)';
+                                        }
+                                        const dur = raw.episodeDuration != null ? raw.episodeDuration : 0;
+                                        const endT = raw.episodeEnd != null ? raw.episodeEnd : ctx.parsed.x;
+                                        return ctx.dataset.label +
+                                            ': t\u2248' + ctx.parsed.x.toFixed(2) + '\u2013' + endT.toFixed(2) +
+                                            's (\u2248' + dur.toFixed(2) + 's from samples)';
+                                    }
+                                    return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + 's';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            setupSeekLabelTooltip(charts.buffer, skData);
+
+            // Quality over time (linear x-axis)
+            const qualityCtx = document.getElementById('qualityChart').getContext('2d');
+
+            const qualityDatasets = [
+                {
+                    label: 'Without buffer.py',
+                    data: toXY(withoutTS.time_points, withoutTS.qualities),
+                    borderColor: 'rgba(231, 76, 60, 0.7)',
+                    backgroundColor: 'rgba(231, 76, 60, 0.05)',
+                    borderDash: [6, 3],
+                    borderWidth: 2,
+                    tension: 0.1,
+                    pointRadius: 1.5,
+                    stepped: 'after'
+                },
+                {
+                    label: label,
+                    data: toXY(withTS.time_points, withTS.qualities),
+                    borderColor: 'rgba(39, 174, 96, 1)',
+                    backgroundColor: 'rgba(39, 174, 96, 0.08)',
+                    borderWidth: 2.5,
+                    tension: 0.1,
+                    pointRadius: 1.5,
+                    stepped: 'after'
+                }
+            ];
+            const rebufQualityYWithout = 0.12;
+            const rebufQualityYWith = 0.36;
+            const rebufWithoutQ = remapStallPointsY(rebufWithout, rebufQualityYWithout);
+            const rebufWithQ = remapStallPointsY(rebufWith, rebufQualityYWith);
+            if (rebufWithoutQ.length > 0) {
+                qualityDatasets.push({
+                    label: 'Stall start (without)',
+                    data: rebufWithoutQ,
+                    type: 'scatter',
+                    pointStyle: 'crossRot',
+                    pointRadius: 10,
+                    pointHoverRadius: 14,
+                    pointBackgroundColor: 'rgba(231, 76, 60, 1)',
+                    pointBorderColor: 'rgba(231, 76, 60, 1)',
+                    pointBorderWidth: 3,
+                    showLine: false
+                });
+            }
+            if (rebufWithQ.length > 0) {
+                qualityDatasets.push({
+                    label: 'Stall start (with)',
+                    data: rebufWithQ,
+                    type: 'scatter',
+                    pointStyle: 'triangle',
+                    pointRadius: 10,
+                    pointHoverRadius: 14,
+                    pointBackgroundColor: 'rgba(243, 156, 18, 1)',
+                    pointBorderColor: 'rgba(230, 126, 34, 1)',
+                    pointBorderWidth: 3,
+                    showLine: false
+                });
+            }
+            if (pf.length > 0) {
+                qualityDatasets.push({
+                    label: 'Prefetch download',
+                    data: pf.map(e => ({ x: e.end_time / 1000, y: e.quality })),
+                    type: 'scatter',
+                    pointStyle: 'triangle',
+                    pointRadius: 10,
+                    pointHoverRadius: 14,
+                    pointBackgroundColor: 'rgba(46, 204, 113, 0.9)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    showLine: false
+                });
+            }
+            charts.quality = new Chart(qualityCtx, {
+                type: 'line',
+                data: { datasets: qualityDatasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Quality Level' },
+                            afterFit: function(axis) { axis.width = YAXIS_WIDTH; }
+                        },
+                        x: {
+                            type: 'linear',
+                            min: sharedXMin,
+                            max: sharedXMax,
+                            title: { display: true, text: 'Playback Time (seconds)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        annotation: { annotations: baseAnnotations },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    if (ctx.dataset.label === 'Prefetch download') {
+                                        return prefetchTooltipLabel(pf[ctx.dataIndex], ctx.parsed.x);
+                                    }
+                                    if (ctx.dataset.label && ctx.dataset.label.indexOf('Stall start') === 0) {
+                                        const raw = ctx.raw || {};
+                                        if (raw.fromSimulator) {
+                                            if (raw.stallDurationSec != null && raw.stallDurationSec > 0) {
+                                                return ctx.dataset.label + ': start ' + ctx.parsed.x.toFixed(2) +
+                                                    's, duration ' + raw.stallDurationSec.toFixed(2) + 's';
+                                            }
+                                            return ctx.dataset.label + ': ' + ctx.parsed.x.toFixed(2) +
+                                                's (simulator rebuffer event)';
+                                        }
+                                        return ctx.dataset.label + ' at ' + ctx.parsed.x.toFixed(2) + 's (estimated)';
+                                    }
+                                    return ctx.dataset.label + ': quality ' + ctx.parsed.y;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            setupSeekLabelTooltip(charts.quality, skData);
+
+            // Quality distribution
+            const qualityDistCtx = document.getElementById('qualityDistChart').getContext('2d');
+            const qualityDistWithout = calculateQualityDistribution(withoutTS.qualities || []);
+            const qualityDistWith = calculateQualityDistribution(withTS.qualities || []);
+            const allQualities = [...new Set([...Object.keys(qualityDistWithout), ...Object.keys(qualityDistWith)])].map(Number).sort((a, b) => a - b);
+
+            charts.qualityDist = new Chart(qualityDistCtx, {
+                type: 'bar',
+                data: {
+                    labels: allQualities.map(q => `Quality ${q}`),
+                    datasets: [
+                        {
+                            label: 'Without buffer.py',
+                            data: allQualities.map(q => qualityDistWithout[q] || 0),
+                            backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                            borderColor: 'rgba(231, 76, 60, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: label,
+                            data: allQualities.map(q => qualityDistWith[q] || 0),
+                            backgroundColor: 'rgba(39, 174, 96, 0.7)',
+                            borderColor: 'rgba(39, 174, 96, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Percentage of Time' },
+                            ticks: {
+                                callback: function(value) { return value + '%'; }
+                            }
+                        },
+                        x: {
+                            title: { display: true, text: 'Quality Level' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: true, position: 'top' }
+                    }
+                }
+            });
+        }
+        
+        function calculateQualityDistribution(qualities) {
+            if (qualities.length === 0) return {};
+            const dist = {};
+            qualities.forEach(q => {
+                dist[q] = (dist[q] || 0) + 1;
+            });
+            const total = qualities.length;
+            Object.keys(dist).forEach(q => {
+                dist[q] = (dist[q] / total) * 100;
+            });
+            return dist;
+        }
+        
+        // Drag and drop support
+        const fileInput = document.getElementById('jsonFileInput');
+        const dropZone = document.body;
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.backgroundColor = '#e8f4f8';
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.backgroundColor = '';
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.backgroundColor = '';
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.json')) {
+                fileInput.files = e.dataTransfer.files;
+                loadFile();
+            }
+        });
+    </script>
+</body>
+</html>
