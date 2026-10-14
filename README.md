@@ -6,6 +6,8 @@ StreamLens is an open-source ABR simulation environment for multi-region bufferi
 
 [Watch the StreamLens software demo](https://youtu.be/Iin3fGVeDJQ)
 
+> **Erratum:** the demo-video URL printed in the ACM MM 2026 camera-ready paper contains a typo (`youtu.be/lin3fGVeDJQ`, with a lowercase `L`). The correct link is the one above, which starts with a capital `I`: <https://youtu.be/Iin3fGVeDJQ>
+
 The demo shows the StreamLens workflow for running ABR simulations with multi-region buffering, seeking, prefetching, cross-ABR comparison, and browser-based QoE visualization.
 
 ## Requirements
@@ -16,8 +18,8 @@ The demo shows the StreamLens workflow for running ABR simulations with multi-re
 ## Quick Start
 
 ```bash
-git clone https://github.com/Slothbetty/sabre.git
-cd sabre
+git clone https://github.com/Slothbetty/StreamLens.git
+cd StreamLens
 pip install -r requirements.txt
 cd src
 ```
