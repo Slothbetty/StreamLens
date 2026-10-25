@@ -5,3 +5,6 @@ example/mmsys18/figures
 example/tomm19/tmp
 example/tomm19/stats
 example/tomm19/figures
+
+# Claude Code personal settings (not shared)
+.claude/settings.local.json
