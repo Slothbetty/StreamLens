@@ -26,6 +26,7 @@ import os
 from importlib.machinery import SourceFileLoader
 from enum import Enum
 
+import comyco
 from global_state import gs
 
 
@@ -783,6 +784,41 @@ class Bba(Abr):
 
 
 abr_list["bba"] = Bba
+
+
+class Comyco(Abr):
+
+    weights_name = "comyco"
+
+    def __init__(self, config):
+        self.weights = comyco.load_weights(self.weights_name)
+        self.state = comyco.StateBuilder(gs.manifest.bitrates)
+        self.first_segment_pushed = False
+
+    def choose(self, scores):
+        return int(scores.argmax())
+
+    def get_quality_delay(self, segment_index):
+        if not self.first_segment_pushed:
+            # The first segment is downloaded during startup and is never passed to report_download().
+            # gs.startup_time is its download time without latency, gs.latency its time to first byte.
+            quality = self.get_first_quality()
+            self.state.push(quality, gs.manifest.segments[0][quality], gs.startup_time + gs.latency)
+            self.first_segment_pushed = True
+
+        level = get_buffer_level(gs.manifest.segment_time, gs.buffer_contents, gs.buffer_fcc)
+        segments = gs.manifest.segments
+        state = self.state.observe(level, segments[segment_index], len(segments) - segment_index)
+        return (self.choose(comyco.scores(self.weights, state)), 0)
+
+    def report_download(self, metrics, is_replacment):
+        # Segment replacements and abandoned downloads are not part of the decisions the policy learned from.
+        if is_replacment or metrics.abandon_to_quality is not None:
+            return
+        self.state.push(metrics.quality, metrics.downloaded, metrics.time)
+
+
+abr_list["comyco"] = Comyco
 
 
 class NoReplace(Replacement):
