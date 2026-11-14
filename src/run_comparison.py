@@ -37,7 +37,7 @@ _SUMMARY_KEYS = [
     ('qoe_score',           'qoe score:'),
 ]
 
-SUPPORTED_ABRS = ['bola', 'bolae', 'dynamic', 'dynamicdash', 'throughput']
+SUPPORTED_ABRS = ['bola', 'bolae', 'dynamic', 'dynamicdash', 'throughput', 'comyco']
 
 
 def parse_simulation_output(output):

@@ -185,7 +185,7 @@ python run_comparison.py -n synthetic/network.json -m synthetic/movie.json -a al
 
 Specific algorithms:
 ```bash
-python run_comparison.py -n synthetic/network.json -m synthetic/movie.json -a bola,bolae,dynamic,dynamicdash,throughput -o comparison_results.json
+python run_comparison.py -n synthetic/network.json -m synthetic/movie.json -a bola,bolae,dynamic,dynamicdash,throughput,comyco -o comparison_results.json
 ```
 
 ### With Seek Configuration
